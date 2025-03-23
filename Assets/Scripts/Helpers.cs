@@ -16,4 +16,14 @@ public static class Helpers
     {
         return ConvertToInt(new Vector3(Mathf.Round(position.x), Mathf.Round(position.y), Mathf.Round(position.z)));
     }
+
+    public static (int, int) ScaleToMap(Vector3Int worldPos, Vector2Int mapSize)
+    {
+        return (worldPos.x + mapSize.x / 2, mapSize.y / 2 - worldPos.y);
+    }
+
+    public static Vector3Int ScaleToWorld((int, int) mapPosition, Vector2Int mapSize)
+    {
+        return new Vector3Int(mapPosition.Item1 - mapSize.x / 2, mapSize.y / 2 - mapPosition.Item2, 0);
+    }
 }

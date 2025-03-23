@@ -11,14 +11,16 @@ public class CharacterMovement : MonoBehaviour
     [Space]
     public bool isMoving = false;
 
-    private Vector3 destination;
-    private Vector3 direction = Vector3.zero;
+    [SerializeField] private Vector3 destination;
+    [SerializeField] private Vector3 direction = Vector3.zero;
+    private float distanceLastFrame;
 
     void Update()
     {
         if (isMoving)
         {
-            if (Vector3.Distance(destination, transform.position) < epsilon)
+            float distance = Vector3.Distance(destination, transform.position);
+            if (distance < epsilon || distance > distanceLastFrame) // Second condition is in case of overshooting
                 StopMoving();
 
             transform.position += direction * speed * Time.deltaTime;
@@ -31,6 +33,7 @@ public class CharacterMovement : MonoBehaviour
         this.destination = destination;
         direction = (destination - transform.position).normalized;
         direction.z = 0;
+        distanceLastFrame = Vector3.Distance(destination, transform.position);
     }
 
     public void StopMoving()

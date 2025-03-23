@@ -1,33 +1,28 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using AStar;
+using AStar.Algolgorithms;
 
 [RequireComponent(typeof(CharacterMovement))]
 public class Pathfinder : MonoBehaviour
 {
-    public class Node
-    {
-        public Node parent;
-        public Vector3Int position;
-
-        public Node(Node parent, Vector3Int position)
-        {
-            this.parent = parent;
-            this.position = position;
-        }
-    }
-
-    public CharacterMovement characterMovement;
+    [Header("Map Config")]
+    public Vector2Int mapSize;
     public GameObject obstaclesParentObject;
+    [Header("References")]
+    public CharacterMovement characterMovement;
+    [Space]
     public bool hasPath = false;
 
-    private List<Node> path = null;
-    private HashSet<Vector3Int> obstacles = new HashSet<Vector3Int>();
+    [SerializeField] private List<Vector3Int> path = null;
+    private bool[,] walkableMap = null;
 
     void Awake()
     {
         characterMovement = GetComponent<CharacterMovement>();
-        GatherObstacles();
+        GenerateWalkableMap();
     }
 
     void Update()
@@ -43,9 +38,9 @@ public class Pathfinder : MonoBehaviour
         {
             if (!characterMovement.isMoving)
             {
-                Node node = path[0];
+                Vector3Int nextPoint = path[0];
                 path.RemoveAt(0);
-                characterMovement.MoveTowards(node.position);
+                characterMovement.MoveTowards(nextPoint);
             }
         }
         else
@@ -56,58 +51,32 @@ public class Pathfinder : MonoBehaviour
 
     public bool FindPath(Vector3 destination)
     {
-        HashSet<Vector3Int> visited = new HashSet<Vector3Int>();
-        Vector3Int destinationInt = Helpers.SnapToGrid(destination);
-        Vector3Int start = Helpers.SnapToGrid(transform.position);
+        (int, int) start = Helpers.ScaleToMap(Helpers.SnapToGrid(transform.position), mapSize);
+        (int, int) dest = Helpers.ScaleToMap(Helpers.SnapToGrid(destination), mapSize);
 
-        Node startNode = new Node(null, start);
-        Queue<Node> bfsQueue = new Queue<Node>();
-        bfsQueue.Enqueue(startNode);
+        (int, int)[] _path = AStarBoolMap.GeneratePath(start.Item1, start.Item2, dest.Item1, dest.Item2, walkableMap);
+        if (_path.Length == 0)
+            return false;
 
-        while (bfsQueue.Count > 0)
-        {
-            Node node = bfsQueue.Dequeue();
-
-            if (node.position.Equals(destinationInt))
-            {
-                ConvertToPath(node);
-                break;
-            }
-
-            visited.Add(node.position);
-            for (int i = 0; i < Helpers.neswX.Length; i++)
-            {
-                Vector3Int newPosition = node.position + new Vector3Int(Helpers.neswX[i], Helpers.neswY[i]);
-                if (visited.Contains(newPosition) || obstacles.Contains(newPosition))
-                    continue;
-
-                bfsQueue.Enqueue(new Node(node, newPosition));
-            }
-        }
-
-        return path != null;
-    }
-
-    private void ConvertToPath(Node finalNode)
-    {
-        path = new List<Node>();
-
-        while (finalNode.parent != null)
-        {
-            path.Add(finalNode);
-            finalNode = finalNode.parent;
-        }
-
-        path.Reverse();
+        path = new List<Vector3Int>();
+        for (int i = 0; i < _path.Length; i++)
+            path.Add(Helpers.ScaleToWorld(_path[i], mapSize));
         hasPath = true;
+        return true;
     }
 
-    private void GatherObstacles()
+    private void GenerateWalkableMap()
     {
+        walkableMap = new bool[mapSize.y, mapSize.x];
+        for (int i = 0; i < mapSize.y; i++)
+            for (int j = 0; j < mapSize.x; j++)
+                walkableMap[i, j] = true;
+
         Transform[] transforms = obstaclesParentObject.GetComponentsInChildren<Transform>();
         for (int i = 1; i < transforms.Length; i++)
         {
-            obstacles.Add(Helpers.SnapToGrid(transforms[i].position));
+            (int, int) obstacle = Helpers.ScaleToMap(Helpers.SnapToGrid(transforms[i].position), mapSize);
+            walkableMap[obstacle.Item2, obstacle.Item1] = false;
         }
     }
 }
