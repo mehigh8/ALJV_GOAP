@@ -26,4 +26,9 @@ public static class Helpers
     {
         return new Vector3Int(mapPosition.Item1 - mapSize.x / 2, mapSize.y / 2 - mapPosition.Item2, 0);
     }
+
+    public static int Bool2Int(bool b)
+    {
+        return b ? 1 : 0;
+    }
 }

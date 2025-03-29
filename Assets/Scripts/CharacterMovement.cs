@@ -6,6 +6,7 @@ public class CharacterMovement : MonoBehaviour
 {
     [Header("Config")]
     public float speed;
+    public float speedUp = 1f;
     [Tooltip("How close to get to destination")]
     public float epsilon;
     [Space]
@@ -23,7 +24,7 @@ public class CharacterMovement : MonoBehaviour
             if (distance < epsilon || distance > distanceLastFrame) // Second condition is in case of overshooting
                 StopMoving();
 
-            transform.position += direction * speed * Time.deltaTime;
+            transform.position += direction * speed * Time.deltaTime * speedUp;
         }
     }
 

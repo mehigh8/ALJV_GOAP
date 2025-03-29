@@ -23,6 +23,8 @@ public class Pathfinder : MonoBehaviour
     {
         characterMovement = GetComponent<CharacterMovement>();
         GenerateWalkableMap();
+
+        GameManager.GetInstance().pickupSpawner.SpawnPickups(walkableMap, mapSize);
     }
 
     void Update()
