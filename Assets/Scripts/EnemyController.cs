@@ -5,34 +5,60 @@ using UnityEngine;
 public class EnemyController : MonoBehaviour
 {
     [Header("Stats")]
-    public float health = 100f;
+    [SerializeField] private Helpers.HealthBar healthBar;
     [HideInInspector] public SwordPickUp.Sword sword = null;
     [Header("References")]
     public CharacterMovement characterController;
+    public GameObject swordIndicator;
 
-    private float maxHealth;
 
     void Awake()
     {
-        maxHealth = health;
+
     }
 
     void Update()
     {
-        
+        // For testing
+        if (sword != null && Input.GetMouseButtonDown(1))
+        {
+            Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, sword.range);
+            foreach (Collider2D collider in colliders)
+            {
+                PlayerController player = collider.GetComponent<PlayerController>();
+                if (player != null)
+                {
+                    player.TakeDamage(sword.damage);
+                    sword.durability--;
+
+                    if (sword.durability <= 0)
+                    {
+                        sword = null;
+                        GameManager.GetInstance().enemyHasSword = false;
+                        swordIndicator.SetActive(false);
+                    }
+                }
+            }
+        }
     }
 
     public void TakeDamage(float damage)
     {
-        health -= damage;
-        if (health < 0) 
-            health = 0;
+        healthBar.TakeDamage(damage);
     }
 
     public void Heal(float health)
     {
-        this.health += health;
-        if (this.health > maxHealth)
-            this.health = maxHealth;
+        healthBar.Heal(health);
+    }
+
+    public SwordPickUp.Sword GainSword(SwordPickUp.Sword sword)
+    {
+        GameManager.GetInstance().enemyHasSword = true;
+        swordIndicator.SetActive(true);
+        SwordPickUp.Sword old = this.sword;
+
+        this.sword = sword;
+        return old;
     }
 }

@@ -70,17 +70,11 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void GainSword(SwordPickUp.Sword sword, bool isPlayer)
+    public SwordPickUp.Sword GainSword(SwordPickUp.Sword sword, bool isPlayer)
     {
         if (isPlayer)
-        {
-            playerHasSword = true;
-            playerController.sword = sword;
-        }
-        else
-        {
-            enemyHasSword = true;
-            enemyController.sword = sword;
-        }
+            return playerController.GainSword(sword);
+
+        return enemyController.GainSword(sword);
     }
 }

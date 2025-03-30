@@ -23,13 +23,16 @@ public class Pathfinder : MonoBehaviour
     {
         characterMovement = GetComponent<CharacterMovement>();
         GenerateWalkableMap();
+    }
 
+    void Start()
+    {
         GameManager.GetInstance().pickupSpawner.SpawnPickups(walkableMap, mapSize);
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Input.GetKeyDown(KeyCode.F)) // For testing
         {
             Vector3 point = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             point.z = 0;

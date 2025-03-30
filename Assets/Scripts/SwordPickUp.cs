@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 public class SwordPickUp : MonoBehaviour, Interactable
 {
@@ -16,7 +17,13 @@ public class SwordPickUp : MonoBehaviour, Interactable
         }
     }
 
+    public TMP_Text durabilityText;
     public Sword sword;
+
+    private void Start()
+    {
+        durabilityText.text = sword.durability.ToString();
+    }
 
     public void Interact(Interactor interactor)
     {
@@ -25,23 +32,14 @@ public class SwordPickUp : MonoBehaviour, Interactable
 
         GameManager gameManager = GameManager.GetInstance();
 
-        if (interactor.isPlayer)
-        {
-            if (gameManager.playerHasSword)
-                return;
+        Sword changedSword = gameManager.GainSword(sword, interactor.isPlayer);
 
-            gameManager.GainSword(sword, interactor.isPlayer);
-
+        if (changedSword == null || changedSword.durability <= 0)
             Destroy(gameObject);
-        }
         else
         {
-            if (gameManager.enemyHasSword)
-                return;
-
-            gameManager.GainSword(sword, interactor.isPlayer);
-
-            Destroy(gameObject);
+            sword = changedSword;
+            durabilityText.text = sword.durability.ToString();
         }
     }
 }

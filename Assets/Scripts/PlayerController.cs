@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -9,15 +10,15 @@ public class PlayerController : MonoBehaviour
     public float speedUp = 1f;
     private Vector3 direction = Vector3.zero;
     [Header("Stats")]
-    public float health = 100f;
+    [SerializeField] private Helpers.HealthBar healthBar;
     [HideInInspector] public SwordPickUp.Sword sword = null;
+    [Header("References")]
+    public GameObject swordIndicator;
 
-    private float maxHealth;
-    
 
     void Awake()
     {
-        maxHealth = health;
+
     }
 
     void Update()
@@ -47,16 +48,12 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        health -= damage;
-        if (health < 0)
-            health = 0;
+        healthBar.TakeDamage(damage);
     }
 
     public void Heal(float health)
     {
-        this.health += health;
-        if (this.health > maxHealth)
-            this.health = maxHealth;
+        healthBar.Heal(health);
     }
 
     private void Attack()
@@ -76,9 +73,20 @@ public class PlayerController : MonoBehaviour
                     {
                         sword = null;
                         GameManager.GetInstance().playerHasSword = false;
+                        swordIndicator.SetActive(false);
                     }
                 }
             }
         }
+    }
+
+    public SwordPickUp.Sword GainSword(SwordPickUp.Sword sword)
+    {
+        GameManager.GetInstance().playerHasSword = true;
+        swordIndicator.SetActive(true);
+        SwordPickUp.Sword old = this.sword;
+
+        this.sword = sword;
+        return old;
     }
 }

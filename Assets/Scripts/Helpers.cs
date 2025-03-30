@@ -1,9 +1,49 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public static class Helpers
 {
+    [System.Serializable]
+    public class HealthBar
+    {
+        public float maxHealth;
+        public float currentHealth;
+        public Slider healthBar;
+
+        public HealthBar(float maxHealth, float currentHealth, Slider healthBar)
+        {
+            this.maxHealth = maxHealth;
+            this.currentHealth = currentHealth;
+            this.healthBar = healthBar;
+        }
+
+        private void UpdateHealthBar()
+        {
+            healthBar.value = currentHealth / maxHealth;
+        }
+
+        public void TakeDamage(float damage)
+        {
+            currentHealth -= damage;
+            if (currentHealth < 0)
+                currentHealth = 0;
+
+            UpdateHealthBar();
+        }
+
+        public void Heal(float health)
+        {
+            currentHealth += health;
+            if (currentHealth > maxHealth)
+                currentHealth = maxHealth;
+
+            UpdateHealthBar();
+        }
+    }
+
+
     public static int[] neswX = { 0, 1, 0, -1 };
     public static int[] neswY = { 1, 0, -1, 0 };
 
