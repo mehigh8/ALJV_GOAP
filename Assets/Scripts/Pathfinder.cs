@@ -32,12 +32,12 @@ public class Pathfinder : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F)) // For testing
-        {
-            Vector3 point = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            point.z = 0;
-            Debug.Log(FindPath(point));
-        }
+        //if (Input.GetKeyDown(KeyCode.F)) // For testing
+        //{
+        //    Vector3 point = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        //    point.z = 0;
+        //    Debug.Log(FindPath(point));
+        //}
 
         if (path != null && path.Count > 0)
         {
@@ -83,5 +83,16 @@ public class Pathfinder : MonoBehaviour
             (int, int) obstacle = Helpers.ScaleToMap(Helpers.SnapToGrid(transforms[i].position), mapSize);
             walkableMap[obstacle.Item2, obstacle.Item1] = false;
         }
+    }
+
+    public void ResetPath()
+    {
+        path = null;
+        hasPath = false;
+    }
+
+    public bool IsPointInMap(Vector3 point)
+    {
+        return point.x > (-mapSize.x / 2) && point.x < mapSize.x / 2 && point.y > (-mapSize.y / 2) && point.y < mapSize.y;
     }
 }

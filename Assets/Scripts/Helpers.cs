@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -43,6 +44,42 @@ public static class Helpers
         }
     }
 
+    public class CountdownTimer
+    {
+        private float initialTime;
+        private float currentTime;
+
+        public Action OnTimerStop = delegate { };
+        public Action OnTimerStart = delegate { };
+
+        public CountdownTimer(float initialTime)
+        {
+            this.initialTime = initialTime;
+        }
+
+        public void Start()
+        {
+            currentTime = initialTime;
+            OnTimerStart.Invoke();
+        }
+
+        public void Stop()
+        {
+            currentTime = 0;
+            OnTimerStop.Invoke();
+        }
+
+        public void Update(float deltaTime)
+        {
+            if (currentTime <= 0)
+                return;
+
+            currentTime -= deltaTime;
+            if (currentTime <= 0)
+                OnTimerStop.Invoke();
+        }
+    }
+
 
     public static int[] neswX = { 0, 1, 0, -1 };
     public static int[] neswY = { 1, 0, -1, 0 };
@@ -70,5 +107,13 @@ public static class Helpers
     public static int Bool2Int(bool b)
     {
         return b ? 1 : 0;
+    }
+
+    public static T GetRandomElement<T>(List<T> list)
+    {
+        if (list == null)
+            return default;
+
+        return list[UnityEngine.Random.Range(0, list.Count)];
     }
 }

@@ -10,7 +10,7 @@ public class PlayerController : MonoBehaviour
     public float speedUp = 1f;
     private Vector3 direction = Vector3.zero;
     [Header("Stats")]
-    [SerializeField] private Helpers.HealthBar healthBar;
+    public Helpers.HealthBar healthBar;
     [HideInInspector] public SwordPickUp.Sword sword = null;
     [Header("References")]
     public GameObject swordIndicator;
@@ -63,10 +63,14 @@ public class PlayerController : MonoBehaviour
             Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, sword.range);
             foreach (Collider2D collider in colliders)
             {
+                if (collider.isTrigger)
+                    continue;
+
                 EnemyController enemy = collider.GetComponent<EnemyController>();
                 if (enemy != null)
                 {
                     enemy.TakeDamage(sword.damage);
+                    GameManager.GetInstance().goapAgent.playerDamage = sword.damage;
                     sword.durability--;
 
                     if (sword.durability <= 0)

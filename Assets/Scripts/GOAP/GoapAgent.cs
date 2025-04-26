@@ -1,0 +1,257 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using static Helpers;
+using UnityEngine.AI;
+
+[RequireComponent(typeof(Pathfinder))]
+[RequireComponent(typeof(EnemyController))]
+public class GoapAgent : MonoBehaviour
+{
+    [Header("Sensors")]
+    public PlayerSensor chaseSensor;
+    public PlayerSensor attackSensor;
+    public DetectPowerupSensor detectPowerupSensor;
+
+    [Header("Known Locations")]
+    public List<Vector3> heals;
+    public List<Vector3> speedUps;
+    public List<Vector3> swords;
+
+    [Header("Known Infos")]
+    public float playerHP = 100f;
+    public float playerDamage = 0f;
+
+    Pathfinder pathfinder;
+
+    [Header("Stats")]
+    EnemyController enemyController;
+
+    GameObject target;
+    Vector3 destination;
+
+    AgentGoal lastGoal;
+    public AgentGoal currentGoal;
+    public ActionPlan actionPlan;
+    public AgentAction currentAction;
+
+    public Dictionary<string, AgentBelief> beliefs;
+    public HashSet<AgentAction> actions;
+    public HashSet<AgentGoal> goals;
+
+    void Awake()
+    {
+        pathfinder = GetComponent<Pathfinder>();
+        enemyController = GetComponent<EnemyController>();
+    }
+
+    void Start()
+    {
+        SetupBeliefs();
+        SetupActions();
+        SetupGoals();
+    }
+
+    void SetupBeliefs()
+    {
+        beliefs = new Dictionary<string, AgentBelief>();
+        BeliefFactory factory = new BeliefFactory(this, beliefs);
+
+        factory.AddBelief("Nothing", () => false);
+
+        factory.AddBelief("AgentIdle", () => !pathfinder.hasPath);
+        factory.AddBelief("AgentMoving", () => pathfinder.hasPath);
+        factory.AddBelief("AgentHealthLow", () => (playerDamage <= 1f && enemyController.healthBar.currentHealth < 25) || (playerDamage >= 1f && enemyController.healthBar.currentHealth <= playerDamage));
+        factory.AddBelief("AgentIsHealthy", () => enemyController.healthBar.currentHealth >= 50);
+        factory.AddBelief("AgentKnowsHeals", () => heals.Count > 0);
+        factory.AddBelief("AgentKnowsSpeeds", () => speedUps.Count > 0);
+        factory.AddBelief("AgentKnowsSwords", () => swords.Count > 0);
+        factory.AddBelief("AgentFastSpeed", () => enemyController.characterController.speedUp > 1f);
+        factory.AddBelief("AgentHasNoWeapon", () => enemyController.sword == null || enemyController.sword.damage <= 0.1f);
+        factory.AddBelief("AgentHasWeapon", () => enemyController.sword != null && enemyController.sword.damage >= 0.1f);
+        factory.AddBelief("AgentCanKillPlayer", () => (enemyController.sword != null && enemyController.sword.damage >= 0.1f) && (enemyController.sword.durability * enemyController.sword.damage) >= playerHP);
+        factory.AddBelief("AgentMoreHealthThanPlayer", () => enemyController.healthBar.currentHealth >= playerHP);
+        factory.AddBelief("AgentCanKillPlayerOneHit", () => (enemyController.sword != null && enemyController.sword.damage >= 0.1f) && enemyController.sword.damage >= playerHP);
+
+        factory.AddPlayerSensorBelief("PlayerInChaseRange", chaseSensor);
+        factory.AddPlayerSensorBelief("PlayerInAttackRange", attackSensor);
+
+        factory.AddBelief("AttackingPlayer", () => false);
+    }
+
+    void SetupActions()
+    {
+        actions = new HashSet<AgentAction>();
+
+        actions.Add(new AgentAction.Builder("Idle")
+            .WithStrategy(new IdleStrategy(5))
+            .AddEffect(beliefs["Nothing"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("Wander Around")
+            .WithStrategy(new WanderStrategy(pathfinder, 10))
+            .AddEffect(beliefs["AgentMoving"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("MoveToHeal")
+            .WithStrategy(new MoveStrategy(pathfinder, () =>
+                {
+                    Vector3 chosen = GetRandomElement(heals);
+                    heals.Remove(chosen);
+                    return chosen;
+                }))
+            .AddPrecondition(beliefs["AgentKnowsHeals"])
+            .AddPrecondition(beliefs["AgentHealthLow"])
+            .AddEffect(beliefs["AgentIsHealthy"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("MoveToSpeed")
+            .WithStrategy(new MoveStrategy(pathfinder, () =>
+                {
+                    Vector3 chosen = GetRandomElement(speedUps);
+                    speedUps.Remove(chosen);
+                    return chosen;
+                }))
+            .AddPrecondition(beliefs["AgentKnowsSpeeds"])
+            .AddEffect(beliefs["AgentFastSpeed"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("MoveToWeapon")
+            .WithStrategy(new MoveStrategy(pathfinder, () =>
+                {
+                    Vector3 chosen = GetRandomElement(swords);
+                    swords.Remove(chosen);
+                    return chosen;
+                }))
+            .AddPrecondition(beliefs["AgentHasNoWeapon"])
+            .AddPrecondition(beliefs["AgentKnowsSwords"])
+            .AddEffect(beliefs["AgentHasWeapon"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("ChasePlayer")
+            .WithStrategy(new MoveStrategy(pathfinder, () => beliefs["PlayerInChaseRange"].location))
+            .AddPrecondition(beliefs["PlayerInChaseRange"])
+            .AddPrecondition(beliefs["AgentHasWeapon"])
+            .AddEffect(beliefs["PlayerInAttackRange"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("AttackPlayer")
+            .WithStrategy(new AttackStrategy(2f, enemyController))
+            .AddPrecondition(beliefs["PlayerInAttackRange"])
+            .AddPrecondition(beliefs["AgentHasWeapon"])
+            .AddEffect(beliefs["AttackingPlayer"])
+            .Build());
+
+
+    }
+
+    void SetupGoals()
+    {
+        goals = new HashSet<AgentGoal>();
+
+        goals.Add(new AgentGoal.Builder("Idle")
+            .WithPriority(1)
+            .WithDesiredEffect(beliefs["Nothing"])
+            .Build());
+
+        goals.Add(new AgentGoal.Builder("Wander")
+            .WithPriority(1)
+            .WithDesiredEffect(beliefs["AgentMoving"])
+            .Build());
+
+        goals.Add(new AgentGoal.Builder("HealUp")
+            .WithPriority(2)
+            .WithDesiredEffect(beliefs["AgentIsHealthy"])
+            .Build());
+
+        goals.Add(new AgentGoal.Builder("DestroyPlayer")
+            .WithPriority(3)
+            .WithDesiredEffect(beliefs["AttackingPlayer"])
+            .Build());
+    }
+
+    bool InRangeOf(Vector3 pos, float range) => Vector3.Distance(transform.position, pos) < range;
+
+    void OnEnable() => chaseSensor.OnTargetChanged += HandleTargetChanged;
+    void OnDisable() => chaseSensor.OnTargetChanged -= HandleTargetChanged;
+
+    void HandleTargetChanged()
+    {
+        Debug.Log("Target changed, clearing current action and goal");
+        // Force the planner to re-evaluate the plan
+        currentAction = null;
+        currentGoal = null;
+    }
+
+    void Update()
+    {
+        // Update the plan and current action if there is one
+        if (currentAction == null)
+        {
+            Debug.Log("Calculating any potential new plan");
+            CalculatePlan();
+
+            if (actionPlan != null && actionPlan.Actions.Count > 0)
+            {
+                pathfinder.ResetPath();
+
+                currentGoal = actionPlan.AgentGoal;
+                Debug.Log($"Goal: {currentGoal.name} with {actionPlan.Actions.Count} actions in plan");
+                currentAction = actionPlan.Actions.Pop();
+                Debug.Log($"Popped action: {currentAction.name}");
+                // Verify all precondition effects are true
+                if (currentAction.preconditions.All(b => b.Evaluate()))
+                {
+                    currentAction.Start();
+                }
+                else
+                {
+                    Debug.Log("Preconditions not met, clearing current action and goal");
+                    currentAction = null;
+                    currentGoal = null;
+                }
+            }
+        }
+
+        // If we have a current action, execute it
+        if (actionPlan != null && currentAction != null)
+        {
+            currentAction.Update(Time.deltaTime);
+
+            if (currentAction.complete)
+            {
+                Debug.Log($"{currentAction.name} complete");
+                currentAction.Stop();
+                currentAction = null;
+
+                if (actionPlan.Actions.Count == 0)
+                {
+                    Debug.Log("Plan complete");
+                    lastGoal = currentGoal;
+                    currentGoal = null;
+                }
+            }
+        }
+    }
+
+    void CalculatePlan()
+    {
+        var priorityLevel = currentGoal?.priority ?? 0;
+
+        HashSet<AgentGoal> goalsToCheck = goals;
+
+        // If we have a current goal, we only want to check goals with higher priority
+        if (currentGoal != null)
+        {
+            Debug.Log("Current goal exists, checking goals with higher priority");
+            goalsToCheck = new HashSet<AgentGoal>(goals.Where(g => g.priority > priorityLevel));
+        }
+
+        var potentialPlan = GoapPlanner.Plan(this, goalsToCheck, lastGoal);
+        if (potentialPlan != null)
+        {
+            actionPlan = potentialPlan;
+        }
+    }
+}

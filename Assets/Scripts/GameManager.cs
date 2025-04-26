@@ -8,6 +8,7 @@ public class GameManager : MonoBehaviour
     public PlayerController playerController;
     public EnemyController enemyController;
     public PickUpSpawner pickupSpawner;
+    public GoapAgent goapAgent;
 
     private static GameManager instance = null;
     private Coroutine playerSpeedCoroutine = null;

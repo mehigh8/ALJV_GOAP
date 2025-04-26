@@ -5,7 +5,7 @@ using UnityEngine;
 public class EnemyController : MonoBehaviour
 {
     [Header("Stats")]
-    [SerializeField] private Helpers.HealthBar healthBar;
+    [SerializeField] public Helpers.HealthBar healthBar;
     [HideInInspector] public SwordPickUp.Sword sword = null;
     [Header("References")]
     public CharacterMovement characterController;
@@ -20,26 +20,29 @@ public class EnemyController : MonoBehaviour
     void Update()
     {
         // For testing
-        if (sword != null && Input.GetMouseButtonDown(1))
-        {
-            Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, sword.range);
-            foreach (Collider2D collider in colliders)
-            {
-                PlayerController player = collider.GetComponent<PlayerController>();
-                if (player != null)
-                {
-                    player.TakeDamage(sword.damage);
-                    sword.durability--;
+        //if (sword != null && Input.GetMouseButtonDown(1))
+        //{
+        //    Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, sword.range);
+        //    foreach (Collider2D collider in colliders)
+        //    {
+        //        if (collider.isTrigger)
+        //            continue;
 
-                    if (sword.durability <= 0)
-                    {
-                        sword = null;
-                        GameManager.GetInstance().enemyHasSword = false;
-                        swordIndicator.SetActive(false);
-                    }
-                }
-            }
-        }
+        //        PlayerController player = collider.GetComponent<PlayerController>();
+        //        if (player != null)
+        //        {
+        //            player.TakeDamage(sword.damage);
+        //            sword.durability--;
+
+        //            if (sword.durability <= 0)
+        //            {
+        //                sword = null;
+        //                GameManager.GetInstance().enemyHasSword = false;
+        //                swordIndicator.SetActive(false);
+        //            }
+        //        }
+        //    }
+        //}
     }
 
     public void TakeDamage(float damage)
@@ -59,6 +62,7 @@ public class EnemyController : MonoBehaviour
         SwordPickUp.Sword old = this.sword;
 
         this.sword = sword;
+        GameManager.GetInstance().goapAgent.attackSensor.UpdateRange(sword.range);
         return old;
     }
 }
