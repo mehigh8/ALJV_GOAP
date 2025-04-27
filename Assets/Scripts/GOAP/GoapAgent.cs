@@ -62,17 +62,19 @@ public class GoapAgent : MonoBehaviour
 
         factory.AddBelief("AgentIdle", () => !pathfinder.hasPath);
         factory.AddBelief("AgentMoving", () => pathfinder.hasPath);
-        factory.AddBelief("AgentHealthLow", () => (playerDamage <= 1f && enemyController.healthBar.currentHealth < 25) || (playerDamage >= 1f && enemyController.healthBar.currentHealth <= playerDamage));
-        factory.AddBelief("AgentIsHealthy", () => enemyController.healthBar.currentHealth >= 50);
+        factory.AddBelief("AgentHealthLow", () => enemyController.healthBar.currentHealth <= 20);
+        factory.AddBelief("AgentIsHealthy", () => enemyController.healthBar.currentHealth > 20);
         factory.AddBelief("AgentKnowsHeals", () => heals.Count > 0);
         factory.AddBelief("AgentKnowsSpeeds", () => speedUps.Count > 0);
         factory.AddBelief("AgentKnowsSwords", () => swords.Count > 0);
         factory.AddBelief("AgentFastSpeed", () => enemyController.characterController.speedUp > 1f);
-        factory.AddBelief("AgentHasNoWeapon", () => enemyController.sword == null || enemyController.sword.damage <= 0.1f);
-        factory.AddBelief("AgentHasWeapon", () => enemyController.sword != null && enemyController.sword.damage >= 0.1f);
-        factory.AddBelief("AgentCanKillPlayer", () => (enemyController.sword != null && enemyController.sword.damage >= 0.1f) && (enemyController.sword.durability * enemyController.sword.damage) >= playerHP);
+        factory.AddBelief("AgentHasNoWeapon", () => !GameManager.GetInstance().enemyHasSword);
+        factory.AddBelief("AgentHasWeapon", () => GameManager.GetInstance().enemyHasSword);
+        factory.AddBelief("AgentCanKillPlayer", () => GameManager.GetInstance().enemyHasSword && (enemyController.sword.durability * enemyController.sword.damage) >= playerHP);
+        factory.AddBelief("AgentCannotKillPlayer", () => GameManager.GetInstance().enemyHasSword && (enemyController.sword.durability * enemyController.sword.damage) < playerHP);
         factory.AddBelief("AgentMoreHealthThanPlayer", () => enemyController.healthBar.currentHealth >= playerHP);
-        factory.AddBelief("AgentCanKillPlayerOneHit", () => (enemyController.sword != null && enemyController.sword.damage >= 0.1f) && enemyController.sword.damage >= playerHP);
+        factory.AddBelief("AgentLessHealthThanPlayer", () => enemyController.healthBar.currentHealth < playerHP);
+        factory.AddBelief("AgentCanKillPlayerOneHit", () => GameManager.GetInstance().enemyHasSword && enemyController.sword.damage >= playerHP);
 
         factory.AddPlayerSensorBelief("PlayerInChaseRange", chaseSensor);
         factory.AddPlayerSensorBelief("PlayerInAttackRange", attackSensor);
@@ -95,69 +97,76 @@ public class GoapAgent : MonoBehaviour
             .Build());
 
         actions.Add(new AgentAction.Builder("MoveToHeal")
-            .WithStrategy(new MoveStrategy(pathfinder, () =>
-                {
-                    Vector3 chosen = GetRandomElement(heals);
-                    heals.Remove(chosen);
-                    return chosen;
-                }))
+            .WithStrategy(new MoveToPickupStrategy(pathfinder, () => GetRandomElement(heals), heals))
             .AddPrecondition(beliefs["AgentKnowsHeals"])
             .AddPrecondition(beliefs["AgentHealthLow"])
             .AddEffect(beliefs["AgentIsHealthy"])
             .Build());
 
         actions.Add(new AgentAction.Builder("MoveToSpeed")
-            .WithStrategy(new MoveStrategy(pathfinder, () =>
-                {
-                    Vector3 chosen = GetRandomElement(speedUps);
-                    speedUps.Remove(chosen);
-                    return chosen;
-                }))
+            .WithStrategy(new MoveToPickupStrategy(pathfinder, () => GetRandomElement(speedUps), speedUps))
             .AddPrecondition(beliefs["AgentKnowsSpeeds"])
             .AddEffect(beliefs["AgentFastSpeed"])
             .Build());
 
         actions.Add(new AgentAction.Builder("MoveToWeapon")
-            .WithStrategy(new MoveStrategy(pathfinder, () =>
-                {
-                    Vector3 chosen = GetRandomElement(swords);
-                    swords.Remove(chosen);
-                    return chosen;
-                }))
+            .WithStrategy(new MoveToPickupStrategy(pathfinder, () => GetRandomElement(swords), swords))
             .AddPrecondition(beliefs["AgentHasNoWeapon"])
             .AddPrecondition(beliefs["AgentKnowsSwords"])
             .AddEffect(beliefs["AgentHasWeapon"])
+            .AddEffect(beliefs["AgentCanKillPlayer"])
             .Build());
 
-        actions.Add(new AgentAction.Builder("ChasePlayer")
+        actions.Add(new AgentAction.Builder("DiscardWeapon")
+            .WithStrategy(new DiscardWeaponStrategy(enemyController))
+            .AddPrecondition(beliefs["AgentCannotKillPlayer"])
+            .AddEffect(beliefs["AgentHasNoWeapon"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("ChasePlayerWhenHealthy")
             .WithStrategy(new MoveStrategy(pathfinder, () => beliefs["PlayerInChaseRange"].location))
             .AddPrecondition(beliefs["PlayerInChaseRange"])
             .AddPrecondition(beliefs["AgentHasWeapon"])
+            .AddPrecondition(beliefs["AgentIsHealthy"])
+            .AddPrecondition(beliefs["AgentCanKillPlayer"])
+            .AddEffect(beliefs["PlayerInAttackRange"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("ChasePlayerWhenLowHP")
+            .WithStrategy(new MoveStrategy(pathfinder, () => beliefs["PlayerInChaseRange"].location))
+            .AddPrecondition(beliefs["PlayerInChaseRange"])
+            .AddPrecondition(beliefs["AgentHasWeapon"])
+            .AddPrecondition(beliefs["AgentHealthLow"])
+            .AddPrecondition(beliefs["AgentCanKillPlayerOneHit"])
             .AddEffect(beliefs["PlayerInAttackRange"])
             .Build());
 
         actions.Add(new AgentAction.Builder("AttackPlayer")
-            .WithStrategy(new AttackStrategy(2f, enemyController))
+            .WithStrategy(new AttackStrategy(1f, enemyController))
             .AddPrecondition(beliefs["PlayerInAttackRange"])
             .AddPrecondition(beliefs["AgentHasWeapon"])
             .AddEffect(beliefs["AttackingPlayer"])
             .Build());
-
-
     }
 
     void SetupGoals()
     {
         goals = new HashSet<AgentGoal>();
 
-        goals.Add(new AgentGoal.Builder("Idle")
-            .WithPriority(1)
-            .WithDesiredEffect(beliefs["Nothing"])
-            .Build());
-
         goals.Add(new AgentGoal.Builder("Wander")
             .WithPriority(1)
             .WithDesiredEffect(beliefs["AgentMoving"])
+            .Build());
+
+        goals.Add(new AgentGoal.Builder("GetSpeedUp")
+            .WithPriority(1)
+            .WithDesiredEffect(beliefs["AgentFastSpeed"])
+            .Build());
+
+        goals.Add(new AgentGoal.Builder("GetNewWeapon")
+            .WithPriority(1.5f)
+            .WithDesiredEffect(beliefs["AgentHasWeapon"])
+            .WithDesiredEffect(beliefs["AgentCanKillPlayer"])
             .Build());
 
         goals.Add(new AgentGoal.Builder("HealUp")
@@ -165,8 +174,8 @@ public class GoapAgent : MonoBehaviour
             .WithDesiredEffect(beliefs["AgentIsHealthy"])
             .Build());
 
-        goals.Add(new AgentGoal.Builder("DestroyPlayer")
-            .WithPriority(3)
+        goals.Add(new AgentGoal.Builder("AttackPlayer")
+            .WithPriority(2)
             .WithDesiredEffect(beliefs["AttackingPlayer"])
             .Build());
     }

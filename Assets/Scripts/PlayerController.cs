@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using static Helpers;
 
 public class PlayerController : MonoBehaviour
 {
@@ -15,17 +16,20 @@ public class PlayerController : MonoBehaviour
     [Header("References")]
     public GameObject swordIndicator;
 
-
+    private CountdownTimer timer;
+    public bool canAttack = true;
     void Awake()
     {
-
+        timer = new CountdownTimer(1f);
+        timer.OnTimerStop += () => canAttack = true;
     }
 
     void Update()
     {
         CalculateMovementDirection();
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && canAttack)
             Attack();
+        timer.Update(Time.deltaTime);
     }
 
     void FixedUpdate()
@@ -60,6 +64,8 @@ public class PlayerController : MonoBehaviour
     {
         if (sword != null)
         {
+            canAttack = false;
+            timer.Start();
             Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, sword.range);
             foreach (Collider2D collider in colliders)
             {

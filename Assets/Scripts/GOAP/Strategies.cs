@@ -71,7 +71,7 @@ public class MoveStrategy : IActionStrategy
     private Func<Vector3> destination;
 
     public bool CanPerform => !Complete;
-    public bool Complete => !pathfinder.hasPath;
+    public bool Complete => !pathfinder.hasPath && !pathfinder.characterMovement.isMoving;
 
     public MoveStrategy(Pathfinder pathfinder, Func<Vector3> destination)
     {
@@ -83,13 +83,37 @@ public class MoveStrategy : IActionStrategy
     public void Stop() => pathfinder.ResetPath();
 }
 
+public class MoveToPickupStrategy : IActionStrategy
+{
+    private Pathfinder pathfinder;
+    private List<Vector3> pickupList;
+    private Func<Vector3> destination;
+
+    public bool CanPerform => !Complete;
+    public bool Complete => !pathfinder.hasPath && !pathfinder.characterMovement.isMoving;
+
+    public MoveToPickupStrategy(Pathfinder pathfinder, Func<Vector3> destination, List<Vector3> pickupList)
+    {
+        this.pathfinder = pathfinder;
+        this.destination = destination;
+        this.pickupList = pickupList;
+    }
+
+    public void Start() => pathfinder.FindPath(destination());
+    public void Stop()
+    {
+        pathfinder.ResetPath();
+        pickupList.Remove(destination());
+    }
+}
+
 public class WanderStrategy : IActionStrategy
 {
     private Pathfinder pathfinder;
     private float wanderRadius;
 
     public bool CanPerform => !Complete;
-    public bool Complete => !pathfinder.hasPath;
+    public bool Complete => !pathfinder.hasPath && !pathfinder.characterMovement.isMoving;
 
     public WanderStrategy(Pathfinder pathfinder, float wanderRadius)
     {
@@ -114,7 +138,7 @@ public class WanderStrategy : IActionStrategy
 
 public class IdleStrategy : IActionStrategy
 {
-    public bool CanPerform => true; // Agent can always Idle
+    public bool CanPerform => true;
     public bool Complete { get; private set; }
 
     private CountdownTimer timer;
@@ -128,4 +152,24 @@ public class IdleStrategy : IActionStrategy
 
     public void Start() => timer.Start();
     public void Update(float deltaTime) => timer.Update(deltaTime);
+}
+
+public class DiscardWeaponStrategy : IActionStrategy
+{
+    public bool CanPerform => true;
+    public bool Complete { get; private set; }
+
+    private EnemyController enemyController;
+
+    public DiscardWeaponStrategy(EnemyController enemyController)
+    {
+        this.enemyController = enemyController;
+    }
+
+    public void Start()
+    {
+        GameManager.GetInstance().enemyHasSword = false;
+        enemyController.sword = null;
+        Complete = true;
+    }
 }

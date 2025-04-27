@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -9,6 +11,8 @@ public class GameManager : MonoBehaviour
     public EnemyController enemyController;
     public PickUpSpawner pickupSpawner;
     public GoapAgent goapAgent;
+    public GameObject endGameObj;
+    public TMP_Text endGameText;
 
     private static GameManager instance = null;
     private Coroutine playerSpeedCoroutine = null;
@@ -27,7 +31,10 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        
+        if (playerController.healthBar.currentHealth <= 0)
+            SceneManager.LoadScene(2);
+        else if (enemyController.healthBar.currentHealth <= 0)
+            SceneManager.LoadScene(1);
     }
 
     public static GameManager GetInstance() => instance;

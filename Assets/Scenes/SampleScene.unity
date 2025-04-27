@@ -39892,6 +39892,18 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.x
       value: -2.5
       objectReference: {fileID: 0}
+    - target: {fileID: 7081825934850468771, guid: 88e7e55bc272cae4fb6476cc86a0c142, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7081825934850468771, guid: 88e7e55bc272cae4fb6476cc86a0c142, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7081825934850468771, guid: 88e7e55bc272cae4fb6476cc86a0c142, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -82944,6 +82956,8 @@ MonoBehaviour:
   enemyController: {fileID: 1013612499}
   pickupSpawner: {fileID: 1714384142}
   goapAgent: {fileID: 1013612500}
+  endGameObj: {fileID: 0}
+  endGameText: {fileID: 0}
   playerHasSword: 0
   enemyHasSword: 0
 --- !u!4 &1714384141
@@ -94170,6 +94184,7 @@ MonoBehaviour:
     range: 0
     durability: 0
   swordIndicator: {fileID: 591271682}
+  canAttack: 1
 --- !u!212 &1991518550
 SpriteRenderer:
   m_ObjectHideFlags: 0
