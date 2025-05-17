@@ -64,6 +64,7 @@ public class GoapAgent : MonoBehaviour
         factory.AddBelief("AgentMoving", () => pathfinder.hasPath);
         factory.AddBelief("AgentHealthLow", () => enemyController.healthBar.currentHealth <= 20);
         factory.AddBelief("AgentIsHealthy", () => enemyController.healthBar.currentHealth > 20);
+        factory.AddBelief("AgentIsFullHealth", () => enemyController.healthBar.currentHealth == enemyController.healthBar.maxHealth);
         factory.AddBelief("AgentKnowsHeals", () => heals.Count > 0);
         factory.AddBelief("AgentKnowsSpeeds", () => speedUps.Count > 0);
         factory.AddBelief("AgentKnowsSwords", () => swords.Count > 0);
@@ -72,8 +73,6 @@ public class GoapAgent : MonoBehaviour
         factory.AddBelief("AgentHasWeapon", () => GameManager.GetInstance().enemyHasSword);
         factory.AddBelief("AgentCanKillPlayer", () => GameManager.GetInstance().enemyHasSword && (enemyController.sword.durability * enemyController.sword.damage) >= playerHP);
         factory.AddBelief("AgentCannotKillPlayer", () => GameManager.GetInstance().enemyHasSword && (enemyController.sword.durability * enemyController.sword.damage) < playerHP);
-        factory.AddBelief("AgentMoreHealthThanPlayer", () => enemyController.healthBar.currentHealth >= playerHP);
-        factory.AddBelief("AgentLessHealthThanPlayer", () => enemyController.healthBar.currentHealth < playerHP);
         factory.AddBelief("AgentCanKillPlayerOneHit", () => GameManager.GetInstance().enemyHasSword && enemyController.sword.damage >= playerHP);
 
         factory.AddPlayerSensorBelief("PlayerInChaseRange", chaseSensor);
@@ -161,6 +160,11 @@ public class GoapAgent : MonoBehaviour
         goals.Add(new AgentGoal.Builder("GetSpeedUp")
             .WithPriority(1)
             .WithDesiredEffect(beliefs["AgentFastSpeed"])
+            .Build());
+
+        goals.Add(new AgentGoal.Builder("GetToFullHealth")
+            .WithPriority(1)
+            .WithDesiredEffect(beliefs["AgentIsFullHealth"])
             .Build());
 
         goals.Add(new AgentGoal.Builder("GetNewWeapon")

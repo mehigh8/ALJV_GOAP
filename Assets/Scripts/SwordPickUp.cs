@@ -35,7 +35,12 @@ public class SwordPickUp : MonoBehaviour, Interactable
         Sword changedSword = gameManager.GainSword(sword, interactor.isPlayer);
 
         if (changedSword == null || changedSword.durability <= 0)
+        {
+            if (!interactor.isPlayer)
+                gameManager.goapAgent.swords.Remove(transform.position);
+
             Destroy(gameObject);
+        }
         else
         {
             sword = changedSword;

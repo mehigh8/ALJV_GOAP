@@ -13,7 +13,10 @@ public class HealPickUp : MonoBehaviour, Interactable
         if (interactor.isPlayer)
             gameManager.playerController.Heal(health);
         else
+        {
+            gameManager.goapAgent.heals.Remove(transform.position);
             gameManager.enemyController.Heal(health);
+        }
 
         Destroy(gameObject);
     }

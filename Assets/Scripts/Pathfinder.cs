@@ -89,6 +89,7 @@ public class Pathfinder : MonoBehaviour
     {
         path = null;
         hasPath = false;
+        characterMovement.StopMoving();
     }
 
     public bool IsPointInMap(Vector3 point)

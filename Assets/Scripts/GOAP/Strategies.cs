@@ -103,7 +103,8 @@ public class MoveToPickupStrategy : IActionStrategy
     public void Stop()
     {
         pathfinder.ResetPath();
-        pickupList.Remove(destination());
+        if (pickupList.Contains(destination()))
+            pickupList.Remove(destination());
     }
 }
 

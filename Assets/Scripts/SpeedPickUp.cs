@@ -11,6 +11,9 @@ public class SpeedPickUp : MonoBehaviour, Interactable
         GameManager gameManager = GameManager.GetInstance();
         gameManager.SpeedUp(time, interactor.isPlayer);
 
+        if (!interactor.isPlayer)
+            gameManager.goapAgent.speedUps.Remove(transform.position);
+
         Destroy(gameObject);
     }
 }
