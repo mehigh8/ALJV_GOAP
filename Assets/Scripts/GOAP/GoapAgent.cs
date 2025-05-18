@@ -65,6 +65,7 @@ public class GoapAgent : MonoBehaviour
         factory.AddBelief("AgentHealthLow", () => enemyController.healthBar.currentHealth <= 20);
         factory.AddBelief("AgentIsHealthy", () => enemyController.healthBar.currentHealth > 20);
         factory.AddBelief("AgentIsFullHealth", () => enemyController.healthBar.currentHealth == enemyController.healthBar.maxHealth);
+        factory.AddBelief("AgentIsNotFullHealth", () => enemyController.healthBar.currentHealth < enemyController.healthBar.maxHealth);
         factory.AddBelief("AgentKnowsHeals", () => heals.Count > 0);
         factory.AddBelief("AgentKnowsSpeeds", () => speedUps.Count > 0);
         factory.AddBelief("AgentKnowsSwords", () => swords.Count > 0);
@@ -100,6 +101,13 @@ public class GoapAgent : MonoBehaviour
             .AddPrecondition(beliefs["AgentKnowsHeals"])
             .AddPrecondition(beliefs["AgentHealthLow"])
             .AddEffect(beliefs["AgentIsHealthy"])
+            .Build());
+
+        actions.Add(new AgentAction.Builder("MoveToHeal")
+            .WithStrategy(new MoveToPickupStrategy(pathfinder, () => GetRandomElement(heals), heals))
+            .AddPrecondition(beliefs["AgentKnowsHeals"])
+            .AddPrecondition(beliefs["AgentIsNotFullHealth"])
+            .AddEffect(beliefs["AgentIsFullHealth"])
             .Build());
 
         actions.Add(new AgentAction.Builder("MoveToSpeed")

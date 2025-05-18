@@ -111,7 +111,7 @@ public static class Helpers
 
     public static T GetRandomElement<T>(List<T> list)
     {
-        if (list == null)
+        if (list == null || list.Count == 0)
             return default;
 
         return list[UnityEngine.Random.Range(0, list.Count)];
